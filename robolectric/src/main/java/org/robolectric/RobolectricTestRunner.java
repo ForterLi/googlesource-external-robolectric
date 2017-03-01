@@ -83,31 +83,8 @@ public class RobolectricTestRunner extends BlockJUnit4ClassRunner {
 
   protected DependencyResolver getJarResolver() {
     if (dependencyResolver == null) {
-      if (Boolean.getBoolean("robolectric.offline")) {
-        String dependencyDir = System.getProperty("robolectric.dependency.dir", ".");
-        dependencyResolver = new LocalDependencyResolver(new File(dependencyDir));
-      } else {
-        File cacheDir = new File(new File(System.getProperty("java.io.tmpdir")), "robolectric");
-
-        if (cacheDir.exists() || cacheDir.mkdir()) {
-          Logger.info("Dependency cache location: %s", cacheDir.getAbsolutePath());
-          dependencyResolver = new CachedDependencyResolver(new MavenDependencyResolver(), cacheDir, 60 * 60 * 24 * 1000);
-        } else {
-          dependencyResolver = new MavenDependencyResolver();
-        }
-      }
-
-      URL buildPathPropertiesUrl = getClass().getClassLoader().getResource("robolectric-deps.properties");
-      if (buildPathPropertiesUrl != null) {
-        Logger.info("Using Robolectric classes from %s", buildPathPropertiesUrl.getPath());
-
-        FsFile propertiesFile = Fs.fileFromPath(buildPathPropertiesUrl.getFile());
-        try {
-          dependencyResolver = new PropertiesDependencyResolver(propertiesFile, dependencyResolver);
-        } catch (IOException e) {
-          throw new RuntimeException("couldn't read " + buildPathPropertiesUrl, e);
-        }
-      }
+      String dependencyDir = System.getProperty("robolectric.dependency.dir", ".");
+      dependencyResolver = new LocalDependencyResolver(new File(dependencyDir));
     }
 
     return dependencyResolver;

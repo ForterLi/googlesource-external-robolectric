@@ -1,8 +1,13 @@
 package org.robolectric.res;
 
-import com.ximpleware.VTDGen;
-import com.ximpleware.VTDNav;
 import org.jetbrains.annotations.NotNull;
+import org.w3c.dom.Document;
+
+import java.io.File;
+import java.io.ByteArrayInputStream;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 public class DocumentLoader {
   private static final FsFile.Filter ENDS_WITH_XML = new FsFile.Filter() {
@@ -13,12 +18,16 @@ public class DocumentLoader {
 
   private final FsFile resourceBase;
   private final String packageName;
-  private final VTDGen vtdGen;
+  private final DocumentBuilderFactory documentBuilderFactory;
 
   public DocumentLoader(String packageName, ResourcePath resourcePath) {
     this.resourceBase = resourcePath.getResourceBase();
     this.packageName = packageName;
-    vtdGen = new VTDGen();
+
+    documentBuilderFactory = DocumentBuilderFactory.newInstance();
+    documentBuilderFactory.setNamespaceAware(true);
+    documentBuilderFactory.setIgnoringComments(true);
+    documentBuilderFactory.setIgnoringElementContentWhitespace(true);
   }
 
   public void load(String folderBaseName, XmlLoader... xmlLoaders) {
@@ -42,19 +51,16 @@ public class DocumentLoader {
   }
 
   private void loadResourceXmlFile(FsFile fsFile, XmlLoader... xmlLoaders) {
-    VTDNav vtdNav = parse(fsFile);
+    Document document = parse(fsFile);
     for (XmlLoader xmlLoader : xmlLoaders) {
-      xmlLoader.processResourceXml(fsFile, vtdNav, packageName);
+      xmlLoader.processResourceXml(fsFile, document, packageName);
     }
   }
 
-  private VTDNav parse(FsFile xmlFile) {
+  private Document parse(FsFile xmlFile) {
     try {
-      byte[] bytes = xmlFile.getBytes();
-      vtdGen.setDoc(bytes);
-      vtdGen.parse(true);
-
-      return vtdGen.getNav();
+      DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+      return documentBuilder.parse(new ByteArrayInputStream(xmlFile.getBytes()));
     } catch (Exception e) {
       throw new RuntimeException("Error parsing " + xmlFile, e);
     }

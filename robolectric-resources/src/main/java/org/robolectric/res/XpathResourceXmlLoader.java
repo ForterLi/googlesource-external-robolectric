@@ -1,11 +1,24 @@
 package org.robolectric.res;
 
-import com.ximpleware.AutoPilot;
-import com.ximpleware.NavException;
-import com.ximpleware.VTDNav;
-import com.ximpleware.XPathEvalException;
-import com.ximpleware.XPathParseException;
 import org.jetbrains.annotations.NotNull;
+
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+import java.io.File;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+import java.util.LinkedList;
+
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+
 
 public abstract class XpathResourceXmlLoader extends XmlLoader {
   private final String expression;
@@ -28,123 +41,97 @@ public abstract class XpathResourceXmlLoader extends XmlLoader {
   protected abstract void processNode(String name, XmlNode xmlNode, XmlContext xmlContext);
 
   public static class XmlNode {
-    private final VTDNav vtdNav;
 
-    public XmlNode(VTDNav vtdNav) {
-      this.vtdNav = vtdNav;
+    private final Node mNode;
+
+    public XmlNode(Node node) {
+      mNode = node;
     }
 
     public String getElementName() {
-      try {
-        return vtdNav.toString(vtdNav.getCurrentIndex());
-      } catch (NavException e) {
-        throw new RuntimeException(e);
+      if (mNode.getNodeType() == Node.ELEMENT_NODE) {
+        return mNode.getNodeName();
+      } else {
+        return "";
       }
     }
 
     public XmlNode getFirstChild() {
-      try {
-        VTDNav cloneVtdNav = vtdNav.cloneNav();
-        if (!cloneVtdNav.toElement(VTDNav.FIRST_CHILD)) return null;
-        return new XmlNode(cloneVtdNav);
-      } catch (NavException e) {
-        throw new RuntimeException(e);
+      NodeList children = mNode.getChildNodes();
+      for (int i = 0; i < children.getLength(); i++) {
+        if (children.item(i).getNodeType() == Node.ELEMENT_NODE) {
+          return new XmlNode(children.item(i));
+        }
       }
+      return null;
     }
 
     public String getTextContent() {
-      try {
-        return vtdNav.getXPathStringVal();
-      } catch (NavException e) {
-        throw new RuntimeException(e);
-      }
+      StringBuilder output = new StringBuilder();
+      getTextContentHelper(mNode, output);
+      return output.toString();
     }
 
-    public Iterable<XmlNode> selectByXpath(String expr) throws XPathParseException {
-      VTDNav cloneVtdNav = vtdNav.cloneNav();
-      final AutoPilot ap = new AutoPilot(cloneVtdNav);
-      ap.selectXPath(expr);
-      return returnIterable(new Iterator(ap, cloneVtdNav) {
-        @Override boolean doHasNext() throws XPathEvalException, NavException {
-          int result = ap.evalXPath();
-          if (result == -1) {
-            ap.resetXPath();
-          }
-          return result != -1;
-        }
-      });
+    private void getTextContentHelper(Node node, StringBuilder output) {
+      NodeList children = node.getChildNodes();
+      if (node.getNodeType() == Node.TEXT_NODE) {
+        output.append(node.getNodeValue().trim());
+      }
+      for (int i = 0; i < children.getLength(); i++) {
+        getTextContentHelper(children.item(i), output);
+      }
     }
 
     public Iterable<XmlNode> selectElements(String name) {
-      VTDNav cloneVtdNav = vtdNav.cloneNav();
-      final AutoPilot ap = new AutoPilot(cloneVtdNav);
-      ap.selectElement(name);
-      return returnIterable(new Iterator(ap, cloneVtdNav) {
-        @Override boolean doHasNext() throws XPathEvalException, NavException {
-          return ap.iterate();
-        }
-      });
+      LinkedList<XmlNode> elementsList = new LinkedList();
+      Pattern pattern = Pattern.compile(name);
+      selectElementsHelper(pattern, mNode, elementsList);
+      return elementsList;
     }
 
-    private Iterable<XmlNode> returnIterable(final Iterator iterator) {
-      return new Iterable<XmlNode>() {
-        @NotNull @Override public java.util.Iterator<XmlNode> iterator() {
-          return iterator;
+    private void selectElementsHelper(Pattern pattern, Node node, LinkedList<XmlNode> list) {
+      if (node.getNodeType() == Node.ELEMENT_NODE) {
+        Matcher matcher = pattern.matcher(node.getNodeName());
+        if (matcher.matches()) {
+          list.add(new XmlNode(node));
         }
-      };
+        NodeList children = node.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+          selectElementsHelper(pattern, children.item(i), list);
+        }
+      }
     }
 
-    public String getAttrValue(String attrName) {
+    public Iterable<XmlNode> selectByXpath(String expression) {
+      LinkedList<XmlNode> elementsList = new LinkedList();
+
+      XPathFactory xpathFactory = XPathFactory.newInstance();
+      XPath xpath = xpathFactory.newXPath();
+
+      NodeList matchingNodes = null;
       try {
-        int nameIndex = vtdNav.getAttrVal(attrName);
-        return nameIndex == -1 ? null : vtdNav.toNormalizedString(nameIndex);
-      } catch (NavException e) {
-        throw new RuntimeException(e);
+        XPathExpression xpathExpression = xpath.compile(expression);
+        matchingNodes = (NodeList) xpathExpression.evaluate(mNode, XPathConstants.NODESET);
+      } catch (XPathExpressionException e) {
+        return elementsList;
       }
-    }
-
-    public void pushLocation() {
-      vtdNav.push();
-    }
-
-    public void popLocation() {
-      vtdNav.pop();
-    }
-
-    public boolean moveToParent() {
-      try {
-        return vtdNav.toElement(VTDNav.PARENT);
-      } catch (NavException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    private abstract class Iterator implements java.util.Iterator<XmlNode> {
-      private final AutoPilot ap;
-      private final VTDNav vtdNav;
-
-      public Iterator(AutoPilot ap, VTDNav vtdNav) {
-        this.ap = ap;
-        this.vtdNav = vtdNav;
-      }
-
-      @Override public boolean hasNext() {
-        try {
-          return doHasNext();
-        } catch (XPathEvalException | NavException e) {
-          throw new RuntimeException(e);
+      for (int i = 0; i < matchingNodes.getLength(); i++) {
+        if (matchingNodes.item(i).getNodeType() == Node.ELEMENT_NODE) {
+          elementsList.add(new XmlNode(matchingNodes.item(i)));
         }
       }
+      return elementsList;
+    }
 
-      abstract boolean doHasNext() throws XPathEvalException, NavException;
-
-      @Override public XmlNode next() {
-        return new XmlNode(vtdNav);
+    public String getAttrValue(String attributeName) {
+      NamedNodeMap attributes = mNode.getAttributes();
+      if (attributes != null) {
+        Node attribute = attributes.getNamedItem(attributeName);
+        if (attribute != null) {
+          return attribute.getNodeValue();
+        }
       }
-
-      @Override public void remove() {
-        throw new UnsupportedOperationException();
-      }
+      return null;
     }
   }
 }

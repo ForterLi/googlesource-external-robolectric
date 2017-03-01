@@ -1,16 +1,17 @@
 package org.robolectric.res;
 
-import com.ximpleware.VTDNav;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 public abstract class XmlLoader {
   private static final DocumentBuilderFactory documentBuilderFactory;
@@ -42,8 +43,8 @@ public abstract class XmlLoader {
     }
   }
 
-  protected void processResourceXml(FsFile xmlFile, VTDNav vtdNav, String packageName) {
-    processResourceXml(xmlFile, new XpathResourceXmlLoader.XmlNode(vtdNav), new XmlContext(packageName, xmlFile));
+  protected void processResourceXml(FsFile xmlFile, Node node, String packageName) {
+    processResourceXml(xmlFile, new XpathResourceXmlLoader.XmlNode(node), new XmlContext(packageName, xmlFile));
   }
 
   protected abstract void processResourceXml(FsFile xmlFile, XpathResourceXmlLoader.XmlNode xmlNode, XmlContext xmlContext);
