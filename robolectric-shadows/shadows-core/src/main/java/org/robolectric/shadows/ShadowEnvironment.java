@@ -54,13 +54,13 @@ public class ShadowEnvironment {
 
   @Implementation
   public static File getExternalStorageDirectory() {
-    if (!exists(EXTERNAL_CACHE_DIR)) EXTERNAL_CACHE_DIR = TempDirectory.create();
+    if (!exists(EXTERNAL_CACHE_DIR)) EXTERNAL_CACHE_DIR = TempDirectory.createDeleteOnExit();
     return EXTERNAL_CACHE_DIR.toFile();
   }
 
   @Implementation
   public static File getExternalStoragePublicDirectory(String type) {
-    if (!exists(EXTERNAL_FILES_DIR)) EXTERNAL_FILES_DIR = TempDirectory.create();
+    if (!exists(EXTERNAL_FILES_DIR)) EXTERNAL_FILES_DIR = TempDirectory.createDeleteOnExit();
     if (type == null) return EXTERNAL_FILES_DIR.toFile();
     Path path = EXTERNAL_FILES_DIR.resolve(type);
     try {

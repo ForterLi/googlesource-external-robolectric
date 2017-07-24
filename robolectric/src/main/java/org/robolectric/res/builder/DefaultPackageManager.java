@@ -488,7 +488,7 @@ public class DefaultPackageManager extends StubPackageManager implements Robolec
     ApplicationInfo applicationInfo = new ApplicationInfo();
     applicationInfo.packageName = packageName;
     applicationInfo.sourceDir = new File(".").getAbsolutePath();
-    applicationInfo.dataDir = TempDirectory.create().toAbsolutePath().toString();
+    applicationInfo.dataDir = TempDirectory.createDeleteOnExit().toAbsolutePath().toString();
 
     packageInfo.applicationInfo = applicationInfo;
 
@@ -561,11 +561,11 @@ public class DefaultPackageManager extends StubPackageManager implements Robolec
     applicationInfo.name = androidManifest.getApplicationName();
     applicationInfo.metaData = metaDataToBundle(androidManifest.getApplicationMetaData());
     applicationInfo.sourceDir = new File(".").getAbsolutePath();
-    applicationInfo.dataDir = TempDirectory.create().toAbsolutePath().toString();
+    applicationInfo.dataDir = TempDirectory.createDeleteOnExit().toAbsolutePath().toString();
 
     if (RuntimeEnvironment.getApiLevel() >= N) {
-      applicationInfo.credentialProtectedDataDir = TempDirectory.create().toAbsolutePath().toString();
-      applicationInfo.deviceProtectedDataDir = TempDirectory.create().toAbsolutePath().toString();
+      applicationInfo.credentialProtectedDataDir = TempDirectory.createDeleteOnExit().toAbsolutePath().toString();
+      applicationInfo.deviceProtectedDataDir = TempDirectory.createDeleteOnExit().toAbsolutePath().toString();
     }
     applicationInfo.labelRes = labelRes;
     String labelRef = androidManifest.getLabelRef();
