@@ -27,6 +27,8 @@ import static org.robolectric.RuntimeEnvironment.getApiLevel;
  */
 @Implements(AccessibilityManager.class)
 public class ShadowAccessibilityManager {
+  private static AccessibilityManager sInstance;
+  private static final Object sInstanceSync = new Object();
 
   private boolean enabled;
   private List<AccessibilityServiceInfo> installedAccessibilityServiceList;
@@ -37,6 +39,15 @@ public class ShadowAccessibilityManager {
   @HiddenApi
   @Implementation
   public static AccessibilityManager getInstance(Context context) throws Exception {
+    synchronized (sInstanceSync) {
+      if (sInstance == null) {
+          sInstance = createInstance(context);
+      }
+    }
+    return sInstance;
+  }
+
+  private static AccessibilityManager createInstance(Context context) throws Exception {
     if (getApiLevel() >= KITKAT) {
       AccessibilityManager accessibilityManager = Shadow.newInstance(AccessibilityManager.class, new Class[]{Context.class, IAccessibilityManager.class, int.class}, new Object[]{context, new AccessibilityManagerService(context), 0});
       ReflectionHelpers.setField(accessibilityManager, "mHandler", new MyHandler(context.getMainLooper(), accessibilityManager));
