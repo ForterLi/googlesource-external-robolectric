@@ -13,6 +13,7 @@ import com.android.server.accessibility.AccessibilityManagerService;
 import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
 import org.robolectric.annotation.HiddenApi;
+import org.robolectric.annotation.Resetter;
 import org.robolectric.util.ReflectionHelpers;
 import org.robolectric.internal.Shadow;
 import org.robolectric.util.ReflectionHelpers.ClassParameter;
@@ -35,6 +36,13 @@ public class ShadowAccessibilityManager {
   private List<AccessibilityServiceInfo> enabledAccessibilityServiceList;
   private List<ServiceInfo> accessibilityServiceList;
   private boolean touchExplorationEnabled;
+
+  @Resetter
+  public static void reset() {
+      synchronized (sInstanceSync) {
+          sInstance = null;
+      }
+  }
 
   @HiddenApi
   @Implementation
