@@ -13,6 +13,7 @@ import com.android.server.accessibility.AccessibilityManagerService;
 import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
 import org.robolectric.annotation.HiddenApi;
+import org.robolectric.annotation.Resetter;
 import org.robolectric.util.ReflectionHelpers;
 import org.robolectric.shadow.api.Shadow;
 import org.robolectric.util.ReflectionHelpers.ClassParameter;
@@ -24,6 +25,8 @@ import static org.robolectric.RuntimeEnvironment.getApiLevel;
 
 @Implements(AccessibilityManager.class)
 public class ShadowAccessibilityManager {
+  private static AccessibilityManager sInstance;
+  private static final Object sInstanceSync = new Object();
 
   private boolean enabled;
   private List<AccessibilityServiceInfo> installedAccessibilityServiceList;
@@ -31,9 +34,25 @@ public class ShadowAccessibilityManager {
   private List<ServiceInfo> accessibilityServiceList;
   private boolean touchExplorationEnabled;
 
+  @Resetter
+  public static void reset() {
+      synchronized (sInstanceSync) {
+          sInstance = null;
+      }
+  }
+
   @HiddenApi
   @Implementation
   public static AccessibilityManager getInstance(Context context) throws Exception {
+    synchronized (sInstanceSync) {
+      if (sInstance == null) {
+          sInstance = createInstance(context);
+      }
+    }
+    return sInstance;
+  }
+
+  private static AccessibilityManager createInstance(Context context) throws Exception {
     if (getApiLevel() >= KITKAT) {
       AccessibilityManager accessibilityManager = Shadow.newInstance(AccessibilityManager.class,
           new Class[]{Context.class, IAccessibilityManager.class, int.class},
